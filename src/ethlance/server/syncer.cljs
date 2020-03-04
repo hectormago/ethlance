@@ -64,9 +64,8 @@
 
   ;;   ;; ------- add optional fields here -------
   ;; }
-  ;; ethlanceJobId
-  ;; ethalnceContractId
-  ;;
+  ;; ethlanceJobStoryId
+  ;; ethlanceMessageId
   ;; :meta {
   ;;   :platform ;; a string representing the original posting platform (ie 'gitcoin')
   ;;   :schemaVersion ;; a string representing the version number (ie '0.1')
@@ -76,14 +75,22 @@
   (let [ipfs-data (<? (server-utils/get-ipfs-meta @ipfs/ipfs (:_data args)))
         job-id (:_bountyId args)
         block-timestamp 1]
-    ;; if JobStory/id exists on meta create an Invoice:
-    ;;   :job-story/id bountyId
-    ;;   :message/id from ipfs fullfilment meta (the ipfs hash is _data)
-    ;; else ??
+    (if-let [job-story-id (:ethlanceJobStoryId ipfs-data)]
+      ;; if JobStory/id exists on meta means that is our job or our bounty
+      (ethlance-db/add-invoice {:job-story/id job-story-id
+                                :message/id (:ethlanceMessageId ipfs-data)})
 
-    ;; create a candidate
-    ;; create a contract candidate
-    ))
+      ;; else it is a bounty from other systems like gitcoin
+      (let [message-id (ethlance-db/add-message {:message/creator (first (:_fulfillers args))
+                                                 :message/text (str "Palease send money to "
+                                                                    (-> ipfs-data :payload :fulfillers)
+                                                                    "in this amounts"
+                                                                    (-> ipfs-data :payload :payoutAmounts))})
+            job-story-id (ethlance-db/add-job-story {:job/id (:_bountyId args)})]
+        (ethlance-db/add-job-story-message {:job-story/id job-story-id
+                                            :message/id message-id})
+        (ethlance-db/add-invoice {:job-story/id job-story-id
+                                  :message/id message-id})))))
 
 ;; event FulfillmentUpdated(uint _bountyId, uint _fulfillmentId, address payable[] _fulfillers, string _data);
 (defn handle-fulfillment-updated [_ {:keys [args] :as event}]

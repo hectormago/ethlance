@@ -260,7 +260,7 @@
 
    {:table-name :JobStory
     :table-columns
-    [[:job-story/id :integer]
+    [[:job-story/id :integer :autoincrement]
      [:job/id :integer]
      [:job-story/status :varchar]
      [:job-story/date-created :unsigned :integer]
@@ -358,7 +358,7 @@
 
    {:table-name :Message
     :table-columns
-    [[:message/id :integer]
+    [[:message/id :integer :autoincrement]
      [:message/creator address]
      [:message/text :varchar]
      [:message/date-created :unsigned :integer]
@@ -588,6 +588,18 @@
 
 (defn update-job-data [job-data]
   (update-row! :Job job))
+
+(defn add-invoice [invoice]
+  (insert-row :Invoice invoice))
+
+(defn add-message [message]
+  ;; TODO: return autoincrement id
+  (insert-row :Message message))
+
+(defn add-job-story [job-story]
+  ;; TODO: return autoincrement id
+  (insert-row :JobStory job-story))
+
 
 (defn start
   "Start the ethlance-db mount component."
